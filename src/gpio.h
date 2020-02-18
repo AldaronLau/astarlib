@@ -4,6 +4,7 @@
 #define GPIO_PIN0 2
 #define GPIO_PIN2 1
 #define GPIO_PIN4 4
+#define GPIO_PIN10 6
 
 /// configure the data direction to out for the specified pin.
 void gpio_out(uint8_t pin);

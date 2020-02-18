@@ -11,4 +11,7 @@ void timer0_init(void);
 /// Initialize timer 1.
 void timer1_init(void);
 
+/// Initialize timer 3.
+void timer3_init(void);
+
 #endif

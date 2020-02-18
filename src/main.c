@@ -39,16 +39,19 @@ void initialize_system(void) {
     gpio_out(GPIO_PIN0);
     gpio_out(GPIO_PIN2);
     gpio_out(GPIO_PIN4);
+//    gpio_out(GPIO_PIN10);
+    SET_BIT(DDRB, 6);
     // Setup timers 0 and 1 for interrupts
     timer0_init();
     timer1_init();
+    timer3_init();
     // Initialize on-board LEDs for the "sanity check"
     initialize_led(RED);
     initialize_led(YELLOW);
     initialize_led(GREEN);
     // The "sanity check".
     // When you see this pattern of lights you know the board has reset
-    light_show();
+    // light_show();
 }
 
 /****************************************************************************
@@ -56,16 +59,18 @@ void initialize_system(void) {
 ****************************************************************************/
 
 int main(void) {
+    uint64_t last = 500;
+
     // Setup the hardware
     initialize_system();
     // Turn on all of the GPIO LEDs
     gpio_on(GPIO_PIN0);
     gpio_on(GPIO_PIN2);
     gpio_on(GPIO_PIN4);
-    // Enable Interrupts
-    sei();
+    //gpio_on(GPIO_PIN10);
+    // SET_BIT(PORTB, 6);
     // Background self-scheduling of Red LED blinking.
-    uint64_t last = 500;
+    // sei(); // Enable Interrupts
     while(1) {
         if(ms_timer >= last) {
             gpio_toggle(GPIO_PIN0);
