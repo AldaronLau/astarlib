@@ -28,9 +28,6 @@ void initialize_led(int color);
  * Assumes led is initialized */
 void flash_led(Led * color);
 
-/* Flash all the initialized leds for a sanity check light show */
-void light_show(void);
-
 /* turn on specified on board LED. indicate if inverted (0 turns led on)
 */
 void led_on(Led * color);

@@ -1,12 +1,13 @@
 #ifndef TIMER
 #define TIMER
 
-#include <inttypes.h>
-
-extern volatile uint64_t ms_timer;
+#include <stdint.h>
 
 /// Initialize timer 0.
 void timer0_init(void);
+
+/// Set action for timer0.
+void timer0_action(void (*timer0_interrupt)(void));
 
 /// Initialize timer 1.
 void timer1_init(void);

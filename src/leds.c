@@ -75,17 +75,7 @@ void flash_led(Led * color) {
     } else {
         CLEAR_BIT(*color->io.port, color->io.pin);
     }
-    _delay_ms(250);
+    _delay_ms(100);
     TOGGLE_BIT(*color->io.port, color->io.pin);
-    _delay_ms(250);
-}
-
-/* Flash all the initialized leds for a sanity check light show */
-void light_show(void) {
-    int i;
-    for (i = 0; i < 2; i++) {
-        if (bYellowInit) flash_led(&_yellow);
-        if (bRedInit) flash_led(&_red);
-        if (bGreenInit) flash_led(&_green);
-    }
+    _delay_ms(100);
 }
