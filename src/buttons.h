@@ -3,6 +3,7 @@
 
 #include "common.h"
 
+#include <stdbool.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
@@ -38,6 +39,9 @@ void enable_pcint(INTERRUPT_struct* state);
  */
 void setup_button_action(INTERRUPT_struct* state, int release,
     void (*callback)(void));
+
+/// Returns true if the button is pressed.
+bool button_pressed(uint8_t button);
 
 /* Used as a callback placeholder when button is not enabled */
 void empty_function();

@@ -42,33 +42,33 @@ ISR(TIMER0_COMPA_vect) {
 }
 
 /****************************************************************************
-   Timer 1
+   Timer 1: USED FOR MOTOR
 ****************************************************************************/
 
-/// Initialize timer 1.
-/// 16_000_000 / (256 * 15625) = 4 interrupts / second
-void timer1_init(void) {
-    // Set Mode to 14 (Fast PWM - Top = ICR1)
-    CLEAR_BIT(TCCR1A, WGM10 /*0*/);
-    SET_BIT(TCCR1A, WGM11 /*1*/);
-    SET_BIT(TCCR1B, WGM12 /*3*/);
-    SET_BIT(TCCR1B, WGM13 /*4*/);
-
-    // Set Clock Select To Prescaler 8
-    CLEAR_BIT(TCCR1B, CS10 /*0*/);
-    SET_BIT(TCCR1B, CS11 /*1*/);
-    CLEAR_BIT(TCCR1B, CS12 /*2*/);
-
-    // Set Top Value to 4096
-    ICR1 = 4096;
-
-    // Set COM bits
-    CLEAR_BIT(TCCR1A, COM1B0 /*4*/);
-    SET_BIT(TCCR1A, COM1B1 /*5*/);
-
-    // Set match value to 0 (off)
-    OCR1B = 4096 / 2;
-}
+// /// Initialize timer 1.
+// /// 16_000_000 / (256 * 15625) = 4 interrupts / second
+// void timer1_init(void) {
+//     // Set Mode to 14 (Fast PWM - Top = ICR1)
+//     CLEAR_BIT(TCCR1A, WGM10 /*0*/);
+//     SET_BIT(TCCR1A, WGM11 /*1*/);
+//     SET_BIT(TCCR1B, WGM12 /*3*/);
+//     SET_BIT(TCCR1B, WGM13 /*4*/);
+// 
+//     // Set Clock Select To Prescaler 8
+//     CLEAR_BIT(TCCR1B, CS10 /*0*/);
+//     SET_BIT(TCCR1B, CS11 /*1*/);
+//     CLEAR_BIT(TCCR1B, CS12 /*2*/);
+// 
+//     // Set Top Value to 4096
+//     ICR1 = 4096;
+// 
+//     // Set COM bits
+//     CLEAR_BIT(TCCR1A, COM1B0 /*4*/);
+//     SET_BIT(TCCR1A, COM1B1 /*5*/);
+// 
+//     // Set match value to 0 (off)
+//     OCR1B = 0;
+// }
 
 /****************************************************************************
    Timer 3

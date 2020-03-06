@@ -42,6 +42,7 @@ void initialize_button(int button) {
 }
 
 void enable_pcint(INTERRUPT_struct *state) {
+/*
     // PCICR: Pin Change Interrupt Control Register
     // PCIE0: Pin Change Interrupt Enable Bit:
     //    Any change on any enabled PCINT7..0 can fire ISR.
@@ -54,6 +55,7 @@ void enable_pcint(INTERRUPT_struct *state) {
     state->enabled = 1;
     button_mask |= state->mask;
     state->prev_state = PINB & state->mask;
+*/
 }
 
 void setup_button_action(INTERRUPT_struct *state, int release,
@@ -66,16 +68,22 @@ void setup_button_action(INTERRUPT_struct *state, int release,
     }
 }
 
+/// Returns true if the button is pressed.
+bool button_pressed(uint8_t button) {
+    return !(PINB & (1 << button));
+}
+
+/*
 /// Called when button state changes
 ISR(PCINT0_vect) {
     // Read port B, mask for enabled buttons
     uint8_t pinb_now = (PINB & button_mask);
 
     // Check that pin change persists. ignore if not.
-    _delay_ms(10);
-    if (pinb_now ^ (PINB & button_mask)) {
-        return;
-    }
+    // _delay_ms(10);
+    // if (pinb_now ^ (PINB & button_mask)) {
+    //    return;
+    // }
 
     // If interrupt A is enabled, check for changes on button A
     if (_interruptA.enabled) {
@@ -112,3 +120,4 @@ ISR(PCINT0_vect) {
         }
     }
 }
+*/
