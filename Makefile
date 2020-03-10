@@ -6,6 +6,7 @@ LDFLAGS=-Wl,-gc-sections -Wl,-relax
 CC=avr-gcc
 TARGET=out/main.hex
 TARGET_WCET=out/wcet.hex
+TARGET_ENCODER=out/encoder.hex
 OBJECT_FILES=src/buttons.o src/leds.o src/main.o src/timer.o src/gpio.o\
  src/scheduler.o src/motor.o src/encoder.o src/adc.o
 
@@ -38,4 +39,10 @@ wcet:
 
 wcet_program: wcet
 	avrdude -p $(MCU) -c avr109 -P $(PORT) -U flash:w:$(TARGET_WCET)
+
+encoder:
+	$(CC) $(CFLAGS) bench/encoder.c src/motor.c src/gpio.c $(LDFLAGS) -o $(TARGET_ENCODER)
+
+encoder_program: encoder
+	avrdude -p $(MCU) -c avr109 -P $(PORT) -U flash:w:$(TARGET_ENCODER)
 

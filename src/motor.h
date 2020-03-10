@@ -49,3 +49,4 @@ void setupEncoder(void);
 */
 extern volatile int16_t global_counts_m2;
 extern volatile int8_t global_error_m2;
+extern volatile uint32_t interrupt_counter;

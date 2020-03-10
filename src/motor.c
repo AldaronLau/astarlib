@@ -16,9 +16,7 @@
 *  PololuWheelEncoders.cpp
 */
 
-#ifdef DEBUG_PCINT
 volatile uint32_t interrupt_counter = 0;
-#endif
 
 volatile int8_t global_m2a;
 volatile int8_t global_m2b;
@@ -82,9 +80,7 @@ void setupEncoder(void) {
 }
 
 ISR(PCINT0_vect){
-  #ifdef DEBUG
   ++interrupt_counter;
-  #endif
 
   // Make a copy of the current reading from the encoders
   uint8_t tmpB = PINB;
