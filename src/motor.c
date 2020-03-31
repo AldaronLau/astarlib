@@ -9,9 +9,6 @@
 // comment out line if not debugging
 #define DEBUG_PCINT
 
-// For setting frequency of timer. Freq calculation based on TOP+1
-#define TOP_4kHz 3999
-
 /* PCINT for Encoder was ported from
 *  PololuWheelEncoders.cpp
 */
@@ -54,7 +51,7 @@ void setupMotor2(void) {
   // Using 1 as prescaler (001)
   /* 4kHz counter frequency, period of 1/4000 = .25ms period */
   TCCR1B |= (1 << CS10);
-  ICR1 = TOP_4kHz;
+  ICR1 = 32768;
 
   // Turn data direction to output to turn motor on
   OCR1B = 0;  // speed 0

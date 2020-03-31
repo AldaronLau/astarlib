@@ -8,7 +8,7 @@ TARGET=out/main.hex
 TARGET_WCET=out/wcet.hex
 TARGET_ENCODER=out/encoder.hex
 OBJECT_FILES=src/buttons.o src/leds.o src/main.o src/timer.o src/gpio.o\
- src/scheduler.o src/motor.o src/encoder.o src/adc.o
+ src/scheduler.o src/motor.o src/encoder.o src/adc.o src/pd.o
 
 ifndef VIRTUAL_SERIAL_PATH
  $(error VIRTUAL_SERIAL_PATH must be set to use usb virtual serial)
@@ -25,7 +25,7 @@ clean:
 %.hex: %.obj
 	avr-objcopy -R .eeprom -O ihex $< $@
 
-%.obj: $(OBJECT_FILES)
+%.obj: $(OBJECT_FILES) src/*.h
 	$(CC) $(CFLAGS) $(OBJECT_FILES) $(LDFLAGS) -o $@
 
 program: $(TARGET)
