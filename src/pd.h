@@ -10,9 +10,9 @@ void pd_loop(void);
 void pd_add_setpoint(int32_t offset);
 
 /// Set KP (gain)
-void pd_set_gain(int16_t gain);
+void pd_set_gain(int32_t gain);
 
 /// Set KD (damp)
-void pd_set_damp(int16_t damp);
+void pd_set_damp(int32_t damp);
 
 #endif

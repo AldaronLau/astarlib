@@ -19,6 +19,7 @@
 #include "scheduler.h"
 #include "motor.h"
 #include "adc.h"
+#include "pd.h"
 
 // Max out at 100% duty cycle.
 #define MAX_MOTOR_SPEED (32768 / 8)
@@ -38,7 +39,7 @@ static volatile int16_t REF_POS[REF_POS_LEN] = {
 static volatile int8_t REF_POS_HEAD = 0;
 static volatile int8_t REF_POS_TAIL = 0;
 
-static int8_t ref_pos_fifo_incr(int8_t a) {
+/*static int8_t ref_pos_fifo_incr(int8_t a) {
     a += 1;
     if (a >= 16) {
         a = 0;
@@ -49,24 +50,22 @@ static int8_t ref_pos_fifo_incr(int8_t a) {
 static void ref_pos_fifo_push(int16_t value) {
     int8_t new_tail = ref_pos_fifo_incr(REF_POS_TAIL);
     if (new_tail == REF_POS_HEAD) {
-        // Queue is full.
-        /* do nothing, ignore */
+        // Queue is full - do nothing, ignore
         return;
     }
     REF_POS[REF_POS_TAIL] = value;
     REF_POS_TAIL = new_tail;
-}
+}*/
 
-static int16_t ref_pos_fifo_pop(void) {
+/*static int16_t ref_pos_fifo_pop(void) {
     if (REF_POS_HEAD == REF_POS_TAIL) {
-        // Queue is empty
-        /* Don't move motor */
+        // Queue is empty - Don't move motor
         return 0;
     }
     int16_t value = REF_POS[REF_POS_HEAD];
     REF_POS_HEAD = ref_pos_fifo_incr(REF_POS_HEAD);
     return value;
-}
+}*/
 
 // // //
 
@@ -76,7 +75,14 @@ static void motor_control(void) {
         (int32_t) global_counts_m2,
         (int32_t) CURR_REF_POS
     );
-    switch (CURR_DIR) {
+
+    // kP pot (pot goes up to 1024)
+    uint64_t pot = ((uint64_t)adc_read(ANALOG_DC_A7)) * 32768;
+    pd_set_gain(((int32_t)(pot / 1024)) * 16 /*max kP*/);
+
+    pd_loop();
+
+    /*switch (CURR_DIR) {
         case -1: {
             if (global_counts_m2 <= CURR_REF_POS) {
                 CURR_DIR = 0;
@@ -110,7 +116,7 @@ static void motor_control(void) {
             }
             break;
         };
-    }
+    }*/
 }
 
 static void poll_buttons(void) {
@@ -118,14 +124,16 @@ static void poll_buttons(void) {
     bool new_buttonc_state = button_pressed(BUTTONC);
 
     if(!BUTTONA_STATE && new_buttona_state) {
-        // Add to end of queue unless queue is full.
-        ref_pos_fifo_push(2249 /* 360 degrees = 2248.86 */);
-        printf("Button A, queue push len: %d-%d\r\n", REF_POS_HEAD, REF_POS_TAIL);
+        // // Add to end of queue unless queue is full.
+        // ref_pos_fifo_push(2249 /* 360 degrees = 2248.86 */);
+        // printf("Button A, queue push len: %d-%d\r\n", REF_POS_HEAD, REF_POS_TAIL);
+        pd_add_setpoint(2249);
     }
     if(!BUTTONC_STATE && new_buttonc_state) {
-        printf("Button C, queue push len: %d-%d\r\n", REF_POS_HEAD, REF_POS_TAIL);
-        // Add to end of queue
-        ref_pos_fifo_push(-2249 /* -360 degrees = -2248.86 */);
+        // printf("Button C, queue push len: %d-%d\r\n", REF_POS_HEAD, REF_POS_TAIL);
+        // // Add to end of queue
+        // ref_pos_fifo_push(-2249 /* -360 degrees = -2248.86 */);
+        pd_add_setpoint(-2249);
     }
     BUTTONA_STATE = new_buttona_state;
     BUTTONC_STATE = new_buttonc_state;

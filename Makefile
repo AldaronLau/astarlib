@@ -1,7 +1,7 @@
 PORT=/dev/ttyACM0
 
 MCU=atmega32u4
-CFLAGS=-g -Wall -mcall-prologues -mmcu=$(MCU) -Os
+CFLAGS=-g -Wall -Werror -mcall-prologues -mmcu=$(MCU) -Os
 LDFLAGS=-Wl,-gc-sections -Wl,-relax
 CC=avr-gcc
 TARGET=out/main.hex
