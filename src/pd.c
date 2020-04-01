@@ -1,4 +1,5 @@
 #include "pd.h"
+#include "motor.h"
 
 typedef struct {
     int32_t setpoint;
@@ -45,27 +46,25 @@ static int16_t add(int16_t a, int16_t b) {
 /// Run the PD-Control Loop.
 void pd_loop(void) {
     // Get encoder count.
-    
-    // FIXME
+    int32_t count = global_counts_m2;
 
     // Calculate error from encoder count to setpoint.
-    int32_t error = ;
-
-    // FIXME
+    int32_t error = PD_CONTROL.setpoint - count;
+    int32_t error_over_time = error / PD_CONTROL.time; // FIXME: What time unit?
 
     // Send power signal to motor
     int16_t pkp = mul(PD_CONTROL.kp, error);
     int16_t dkd = mul(PD_CONTROL.kd, error_over_time);
     int16_t power = add(pkp, dkd);
 
-    if(power == -32768) {
-        OCR1B = 32768;
+    if(power <= -32768 / 8) {
+        OCR1B = 32768 / 8;
     } else if (power < 0) {
         motorBackward();
-        OCR1B = (uint16_t)(-power);
+        OCR1B = (uint16_t)(-power / 8);
     } else {
         motorForward();
-        OCR1B = (uint16_t) power;
+        OCR1B = (uint16_t) power / 8;
     }
 
     // Increment time counter

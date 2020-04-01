@@ -20,8 +20,8 @@
 #include "motor.h"
 #include "adc.h"
 
-// Max out at a 60% duty cycle.
-#define MAX_MOTOR_SPEED 2399
+// Max out at 100% duty cycle.
+#define MAX_MOTOR_SPEED (32768 / 8)
 
 static volatile bool BUTTONA_STATE = false;
 static volatile bool BUTTONC_STATE = false;

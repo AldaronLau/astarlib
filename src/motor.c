@@ -18,7 +18,7 @@ volatile uint32_t interrupt_counter = 0;
 volatile int8_t global_m2a;
 volatile int8_t global_m2b;
 
-volatile int16_t global_counts_m2 = 0;
+volatile int32_t global_counts_m2 = 0;
 volatile int8_t global_error_m2 = 0;
 
 volatile int16_t global_last_m2a_val;
@@ -51,7 +51,7 @@ void setupMotor2(void) {
   // Using 1 as prescaler (001)
   /* 4kHz counter frequency, period of 1/4000 = .25ms period */
   TCCR1B |= (1 << CS10);
-  ICR1 = 32768;
+  ICR1 = 32768 / 8;
 
   // Turn data direction to output to turn motor on
   OCR1B = 0;  // speed 0

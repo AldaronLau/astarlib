@@ -47,6 +47,6 @@ void setupEncoder(void);
 /* PCINT for Encoder was ported from
 *  PololuWheelEncoders.cpp
 */
-extern volatile int16_t global_counts_m2;
+extern volatile int32_t global_counts_m2;
 extern volatile int8_t global_error_m2;
 extern volatile uint32_t interrupt_counter;
