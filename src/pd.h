@@ -15,4 +15,7 @@ void pd_set_gain(int32_t gain);
 /// Set KD (damp)
 void pd_set_damp(int32_t damp);
 
+/// Print out the current state of the PID.
+void view_current_values(void);
+
 #endif

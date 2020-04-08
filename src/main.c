@@ -39,6 +39,11 @@ static volatile int16_t REF_POS[REF_POS_LEN] = {
 static volatile int8_t REF_POS_HEAD = 0;
 static volatile int8_t REF_POS_TAIL = 0;
 
+static bool UI_TASK_NUMBER = false;
+static char UI_TASK_ID = '\0';
+static int UI_TASK_INDEX = 0;
+static int64_t UI_TASK_VALUE = 0;
+
 /*static int8_t ref_pos_fifo_incr(int8_t a) {
     a += 1;
     if (a >= 16) {
@@ -69,108 +74,147 @@ static void ref_pos_fifo_push(int16_t value) {
 
 // // //
 
-static void motor_control(void) {
-    printf(
-        "Input: %ld, Target: %ld\r\n",
-        (int32_t) global_counts_m2,
-        (int32_t) CURR_REF_POS
-    );
-
+static void potentiometers(void) {
     // kP pot (pot goes up to 1024)
     uint64_t pot = ((uint64_t)adc_read(ANALOG_DC_A7)) * 32768;
     pd_set_gain(((int32_t)(pot / 1024)) * 16 /*max kP*/);
-
-    pd_loop();
-
-    /*switch (CURR_DIR) {
-        case -1: {
-            if (global_counts_m2 <= CURR_REF_POS) {
-                CURR_DIR = 0;
-                OCR1B = 0;
-            }
-            break;
-        }
-        case 1: {
-            if (global_counts_m2 >= CURR_REF_POS) {
-                CURR_DIR = 0;
-                OCR1B = 0;
-            }
-            break;
-        }
-        case 0: default: {
-            int16_t diff = ref_pos_fifo_pop();
-            uint64_t pot = (adc_read(ANALOG_DC_A7) / 2) + 512;
-            printf("POT = %ld\r\n", (int32_t) pot);
-            if(diff != 0) {
-                printf("DIFF = %d\r\n", diff);
-                CURR_REF_POS += diff;
-                if (diff > 0) {
-                    CURR_DIR = 1;
-                    motorBackward();
-                    OCR1B = (uint16_t) ((MAX_MOTOR_SPEED * pot) / 1024);
-                } else if (diff < 0) {
-                    CURR_DIR = -1;
-                    motorForward();
-                    OCR1B = (uint16_t) ((MAX_MOTOR_SPEED * pot) / 1024);
-                }
-            }
-            break;
-        };
-    }*/
 }
 
-static void poll_buttons(void) {
-    bool new_buttona_state = button_pressed(BUTTONA);
-    bool new_buttonc_state = button_pressed(BUTTONC);
-
-    if(!BUTTONA_STATE && new_buttona_state) {
-        // // Add to end of queue unless queue is full.
-        // ref_pos_fifo_push(2249 /* 360 degrees = 2248.86 */);
-        // printf("Button A, queue push len: %d-%d\r\n", REF_POS_HEAD, REF_POS_TAIL);
-        pd_add_setpoint(2249);
-    }
-    if(!BUTTONC_STATE && new_buttonc_state) {
-        // printf("Button C, queue push len: %d-%d\r\n", REF_POS_HEAD, REF_POS_TAIL);
-        // // Add to end of queue
-        // ref_pos_fifo_push(-2249 /* -360 degrees = -2248.86 */);
-        pd_add_setpoint(-2249);
-    }
-    BUTTONA_STATE = new_buttona_state;
-    BUTTONC_STATE = new_buttonc_state;
+static void motor_control(void) {
+    pd_loop();
 }
 
 static void poll_keys(void) {
     char c;
 
+    USB_Mainloop_Handler();
     while((c=fgetc(stdin)) != EOF) {
-        // printf("Hello! Hit any key, including %c (%d) to see this again!\r\n", c, c);
-        switch(c) {
-            /*case 'f': {
-            }*/
-            default: break;
+        if (!UI_TASK_NUMBER) {
+            switch(c) {
+                case 'R': {
+                    // degrees += x
+                    printf("Add how many degrees? ");
+                    USB_Mainloop_Handler();
+                    UI_TASK_NUMBER = true;
+                    UI_TASK_VALUE = 0;
+                    break;
+                }
+                case 'r': {
+                    // degrees -= x
+                    printf("Subtract how many degrees? ");
+                    USB_Mainloop_Handler();
+                    UI_TASK_NUMBER = true;
+                    UI_TASK_VALUE = 0;
+                    break;
+                }
+                case 'Z':
+                case 'z': {
+                    // Zero the encoder marker the current position to 0 degrees
+                    cli();
+                    global_counts_m2 = 0;
+                    sei();
+                    printf("Zeroed global counts\n\r");
+                    USB_Mainloop_Handler();
+                    break;
+                }
+                case 'V':
+                case 'v': {
+                    // Print the current values Kd Kp Vm Pr Pm and T
+                    view_current_values();
+                    USB_Mainloop_Handler();
+                    break;
+                }
+                case 'S':
+                case 's': {
+                    // FIXME: Figure out what this is supposed to do?
+                    break;
+                }
+                default: {
+                    printf("(%d)\n\r", c);
+                    break;
+                }
+            }
+            UI_TASK_ID = c;
+            UI_TASK_INDEX = 0;
+        } else {
+            switch(c) {
+                case '\r': {
+                    UI_TASK_VALUE *= 2249;
+                    UI_TASK_VALUE /= 360;
+                    switch(UI_TASK_ID) {
+                        case 'r': {
+                            pd_add_setpoint(-UI_TASK_VALUE);
+                            printf(" (%ld)\n\r", (int32_t) -UI_TASK_VALUE);
+                            break;
+                        }
+                        case 'R': {
+                            pd_add_setpoint(UI_TASK_VALUE);
+                            printf(" (%ld)\n\r", (int32_t) UI_TASK_VALUE);
+                            break;
+                        }
+                        default: break;
+                    }
+                    USB_Mainloop_Handler();
+                    UI_TASK_NUMBER = false;
+                    break;
+                }
+                case '\x7f': // On my Linux machine, this is backspace
+                case '\b': { // Mac OS?
+                    if(UI_TASK_INDEX == 0) {
+                        UI_TASK_NUMBER = false;
+                        printf("\r                                         \r");
+                        USB_Mainloop_Handler();
+                    } else {
+                        UI_TASK_INDEX -= 1;
+                        printf("\b \b");
+                        USB_Mainloop_Handler();
+                        UI_TASK_VALUE /= 10;
+                    }
+                    break;
+                }
+                default: {
+                    UI_TASK_VALUE *= 10;
+                    if(c <= '9' && c >= '1') {
+                        UI_TASK_VALUE += 1 + (c - '1');
+                    }
+                    UI_TASK_INDEX += 1;
+                    printf("%c", c);
+                    USB_Mainloop_Handler();
+                    break;
+                }
+            }
         }
     }
 }
 
-#define TASKS_LEN 3
+static void trajectory(void) {
+}
+
+#define TASKS_LEN 4
 Task TASK_LIST[TASKS_LEN] = {
     (Task) {
         .ready = false,
         .ms_period = 100,
         .next_release = 0,
-        .callback = motor_control,
+        .callback = potentiometers, // Potentiometers
     },
     (Task) {
         .ready = false,
         .ms_period = 100,
         .next_release = 0,
-        .callback = poll_buttons,
+        .callback = motor_control, // PD Control
     },
     (Task) {
         .ready = false,
         .ms_period = 250,
         .next_release = 0,
-        .callback = poll_keys,
+        .callback = poll_keys, // Text UI
+    },
+    (Task) {
+        .ready = false,
+        .ms_period = 1000,
+        .next_release = 0,
+        .callback = trajectory, // Trajectory interpolation
     },
 };
 
@@ -193,24 +237,6 @@ static void light_show(void) {
 }
 
 /****************************************************************************
-   CALLBACKS
-****************************************************************************/
-
-/*static void press_a(void) {
-    BUTTON_A = true;
-}
-
-static void release_a(void) {
-}
-
-static void press_c(void) {
-    BUTTON_C = true;
-}
-
-static void release_c(void) {
-}*/
-
-/****************************************************************************
    INITIALIZATION
 ****************************************************************************/
 
@@ -220,11 +246,6 @@ void initialize_system(void) {
     // Setup Button A for interrupts
     initialize_button(BUTTONA);
     initialize_button(BUTTONC);
-    // setup_button_action(&_interruptA, 0 /*press*/, press_a);
-    // setup_button_action(&_interruptA, 1 /*release*/, release_a);
-    // setup_button_action(&_interruptC, 0 /*press*/, press_c);
-    // setup_button_action(&_interruptC, 1 /*release*/, release_c);
-    // enable_pcint(&_interruptA);
     // Enable output on the GPIO for the 3 LEDS
     gpio_out(GPIO0);
     // gpio_out(GPIO2);
