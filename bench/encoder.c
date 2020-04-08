@@ -68,7 +68,10 @@ void init(void) {
 uint32_t bench(void) {
     // Move motor
     motorForward();
-    OCR1B = 600;
+    // 90% duty cycle
+    // OCR1B = ((32768 / 8) * 9) / 10;
+    // 25% duty cycle
+    OCR1B = (32768 / 8) / 4;
 
     cli();
     uint32_t begin = interrupt_counter;
