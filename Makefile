@@ -22,7 +22,10 @@ all: $(TARGET)
 clean:
 	rm -f *.o *.hex *.obj *.hex
 
-%.hex: %.obj
+out:
+	mkdir -p out/
+
+%.hex: %.obj out
 	avr-objcopy -R .eeprom -O ihex $< $@
 
 %.obj: $(OBJECT_FILES) src/*.h
