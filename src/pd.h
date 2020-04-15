@@ -2,6 +2,9 @@
 #define PD_H_
 
 #include <stdint.h>
+#include <stdbool.h>
+
+extern volatile bool IS_LOGGING;
 
 /// Run the PD-Control Loop.
 void pd_loop(void);

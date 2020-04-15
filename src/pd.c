@@ -26,6 +26,8 @@ static PDControl PD_CONTROL = (PDControl) {
     .last_encoder_count = 0,
 };
 
+volatile bool IS_LOGGING = false;
+
 void view_current_values(void) {
     printf("Kd: %ld.%02ld, Kp: %ld.%02ld, Vm: %ld.%02ld, Pr: %ld.%02ld, Pm: %ld.%02ld, T: %ld.%02ld\n\r",
         PD_CONTROL.kd / 32768L,
@@ -101,6 +103,10 @@ void pd_loop(void) {
 
     // Increment time counter
     PD_CONTROL.time += 1;
+
+    if(IS_LOGGING) {
+        view_current_values();
+    }
 }
 
 /// Add offset to the setpoint.

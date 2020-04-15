@@ -24,53 +24,26 @@
 // Max out at 100% duty cycle.
 #define MAX_MOTOR_SPEED (32768 / 8)
 
-static volatile bool BUTTONA_STATE = false;
-static volatile bool BUTTONC_STATE = false;
-
-static volatile int32_t CURR_REF_POS = 0;
-static volatile int8_t CURR_DIR = 0 /* Not moving */;
-#define REF_POS_LEN 16
-static volatile int16_t REF_POS[REF_POS_LEN] = {
+#define TRAJECTORY_LEN 16
+static volatile int16_t TRAJECTORY[TRAJECTORY_LEN] = {
     0, 0, 0, 0,
     0, 0, 0, 0,
     0, 0, 0, 0,
     0, 0, 0, 0
 };
-static volatile int8_t REF_POS_HEAD = 0;
-static volatile int8_t REF_POS_TAIL = 0;
+static volatile uint16_t TRAJECTORY_IDX = 16;
 
 static bool UI_TASK_NUMBER = false;
 static char UI_TASK_ID = '\0';
 static int UI_TASK_INDEX = 0;
 static int64_t UI_TASK_VALUE = 0;
-
-/*static int8_t ref_pos_fifo_incr(int8_t a) {
-    a += 1;
-    if (a >= 16) {
-        a = 0;
-    }
-    return a;
-}
-
-static void ref_pos_fifo_push(int16_t value) {
-    int8_t new_tail = ref_pos_fifo_incr(REF_POS_TAIL);
-    if (new_tail == REF_POS_HEAD) {
-        // Queue is full - do nothing, ignore
-        return;
-    }
-    REF_POS[REF_POS_TAIL] = value;
-    REF_POS_TAIL = new_tail;
-}*/
-
-/*static int16_t ref_pos_fifo_pop(void) {
-    if (REF_POS_HEAD == REF_POS_TAIL) {
-        // Queue is empty - Don't move motor
-        return 0;
-    }
-    int16_t value = REF_POS[REF_POS_HEAD];
-    REF_POS_HEAD = ref_pos_fifo_incr(REF_POS_HEAD);
-    return value;
-}*/
+static int32_t UI_TRAJECTORY[TRAJECTORY_LEN] = {
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0
+};
+static uint16_t UI_TRAJECTORY_IDX = 16;
 
 // // //
 
@@ -78,6 +51,10 @@ static void potentiometers(void) {
     // kP pot (pot goes up to 1024)
     uint64_t pot = ((uint64_t)adc_read(ANALOG_DC_A7)) * 32768;
     pd_set_gain(((int32_t)(pot / 1024)) * 16 /*max kP*/);
+
+    // kD pot (pot goes up to 1024)
+    pot = ((uint64_t)adc_read(ANALOG_DC_A11)) * 32768;
+    pd_set_damp(((int32_t)(pot / 1024)) * 16 /*max kD*/);
 }
 
 static void motor_control(void) {
@@ -126,7 +103,8 @@ static void poll_keys(void) {
                 }
                 case 'S':
                 case 's': {
-                    // FIXME: Figure out what this is supposed to do?
+                    // Start / Stop continuously logging data
+                    IS_LOGGING = !IS_LOGGING;
                     break;
                 }
                 default: {
@@ -139,21 +117,31 @@ static void poll_keys(void) {
         } else {
             switch(c) {
                 case '\r': {
-                    UI_TASK_VALUE *= 2249;
-                    UI_TASK_VALUE /= 360;
+                    UI_TRAJECTORY_IDX -= 1;
+                    UI_TRAJECTORY[UI_TRAJECTORY_IDX] = UI_TASK_VALUE;
+                    UI_TASK_VALUE = 0;
+                    UI_TASK_INDEX = 0;
+
                     switch(UI_TASK_ID) {
                         case 'r': {
-                            pd_add_setpoint(-UI_TASK_VALUE);
-                            printf(" (%ld)\n\r", (int32_t) -UI_TASK_VALUE);
+                            uint16_t i;
+                            for (i = 0; i < 16; i++) {
+                                TRAJECTORY[i] = -UI_TRAJECTORY[i];
+                            }
+                            TRAJECTORY_IDX = UI_TRAJECTORY_IDX;
                             break;
                         }
                         case 'R': {
-                            pd_add_setpoint(UI_TASK_VALUE);
-                            printf(" (%ld)\n\r", (int32_t) UI_TASK_VALUE);
+                            uint16_t i;
+                            for (i = 0; i < 16; i++) {
+                                TRAJECTORY[i] = UI_TRAJECTORY[i];
+                            }
+                            TRAJECTORY_IDX = UI_TRAJECTORY_IDX;
                             break;
                         }
                         default: break;
                     }
+                    printf("\n\r");
                     USB_Mainloop_Handler();
                     UI_TASK_NUMBER = false;
                     break;
@@ -172,6 +160,15 @@ static void poll_keys(void) {
                     }
                     break;
                 }
+                case ' ': {
+                    printf(" ");
+                    USB_Mainloop_Handler();
+                    UI_TRAJECTORY_IDX -= 1;
+                    UI_TRAJECTORY[UI_TRAJECTORY_IDX] = UI_TASK_VALUE;
+                    UI_TASK_VALUE = 0;
+                    UI_TASK_INDEX = 0;
+                    break;
+                }
                 default: {
                     UI_TASK_VALUE *= 10;
                     if(c <= '9' && c >= '1') {
@@ -188,10 +185,24 @@ static void poll_keys(void) {
 }
 
 static void trajectory(void) {
+    if(TRAJECTORY_IDX == 16) {
+        return;
+    }
+    int32_t value = TRAJECTORY[TRAJECTORY_IDX];
+    value *= 2249;
+    value /= 360;
+    pd_add_setpoint(value);
+    TRAJECTORY_IDX += 1;
 }
 
 #define TASKS_LEN 4
 Task TASK_LIST[TASKS_LEN] = {
+    (Task) {
+        .ready = false,
+        .ms_period = 100,
+        .next_release = 0,
+        .callback = trajectory, // Trajectory interpolation
+    },
     (Task) {
         .ready = false,
         .ms_period = 100,
@@ -210,12 +221,6 @@ Task TASK_LIST[TASKS_LEN] = {
         .next_release = 0,
         .callback = poll_keys, // Text UI
     },
-    (Task) {
-        .ready = false,
-        .ms_period = 1000,
-        .next_release = 0,
-        .callback = trajectory, // Trajectory interpolation
-    },
 };
 
 /****************************************************************************
@@ -230,9 +235,7 @@ static void light_show(void) {
         // flash_led(&_red);
         flash_led(&_green);
         flash_gpio_led(GPIO0);
-        // flash_gpio_led(GPIO2);
         flash_gpio_led(GPIO4);
-        // flash_gpio_led(GPIO10);
     }
 }
 
@@ -246,12 +249,11 @@ void initialize_system(void) {
     // Setup Button A for interrupts
     initialize_button(BUTTONA);
     initialize_button(BUTTONC);
-    // Enable output on the GPIO for the 3 LEDS
+    // Enable output on the GPIO for 2 LEDS
     gpio_out(GPIO0);
-    // gpio_out(GPIO2);
     gpio_out(GPIO4);
-    // Enable output on the motor.
-    gpio_out(GPIO10);
+    // Potentiometer power
+    gpio_out(GPIO3);
     // Setup timers 0 and 1 for interrupts
     timer0_init();
     // timer1_init();
@@ -259,7 +261,6 @@ void initialize_system(void) {
     // Send tasks to the scheduler.
     scheduler_init(TASK_LIST, TASKS_LEN);
     // Initialize on-board LEDs for the "sanity check"
-    // initialize_led(RED);
     initialize_led(YELLOW);
     initialize_led(GREEN);
     // The "sanity check".
@@ -281,10 +282,9 @@ int main(void) {
     initialize_system();
     // Turn on all of the GPIO LEDs
     gpio_on(GPIO0);
-    // gpio_on(GPIO2);
     gpio_on(GPIO4);
-    // gpio_on(GPIO10);
-
+    // Pot
+    // gpio_on(GPIO3);
     // AStar pin 11
     DDRB |= ( 1 << DDB7 );
     PORTB |= ( 1 << PORTB7 );
